@@ -1,9 +1,9 @@
-// Type definitions for React 15.6
+// Type definitions for React 16.0
 // Project: http://facebook.github.io/react/
 // Definitions by: Asana <https://asana.com>
 //                 AssureSign <http://www.assuresign.com>
 //                 Microsoft <https://microsoft.com>
-//                 John Reilly <https://github.com/johnnyreilly/>
+//                 John Reilly <https://github.com/johnnyreilly>
 //                 Benoit Benezech <https://github.com/bbenezech>
 //                 Patricio Zavolinsky <https://github.com/pzavolinsky>
 //                 Digiguru <https://github.com/digiguru>
@@ -12,8 +12,43 @@
 //                 Tanguy Krotoff <https://github.com/tkrotoff>
 //                 Dovydas Navickas <https://github.com/DovydasNavickas>
 //                 Stéphane Goetz <https://github.com/onigoetz>
+//                 Rich Seviora <https://github.com/richseviora>
+//                 Josh Rutherford <https://github.com/theruther4d>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.3
+
+/*
+Known Problems & Workarounds
+1. The type of cloneElement is incorrect.
+cloneElement(element, props) should accept props object with a subset of properties on element.props.
+React attributes, such as key and ref, should also be accepted in props, but should not exist on element.props.
+The "correct" way to model this, then, is with:
+declare function cloneElement<P extends Q, Q>(
+    element: ReactElement<P>,
+    props?: Q & Attributes,
+    ...children: ReactNode[]): ReactElement<P>;
+However, type inference for Q defaults to {} when intersected with another type.
+(https://github.com/Microsoft/TypeScript/pull/5738#issuecomment-181904905)
+And since any object is assignable to {}, we would lose the type safety of the P extends Q constraint.
+Therefore, the type of props is left as Q, which should work for most cases.
+If you need to call cloneElement with key or ref, you'll need a type cast:
+interface ButtonProps {
+    label: string;
+    isDisabled?: boolean;
+}
+var element: React.CElement<ButtonProps, Button>;
+React.cloneElement(element, { label: "label" });
+// cloning with optional props requires a cast
+React.cloneElement(element, <{ isDisabled?: boolean }>{ isDisabled: true });
+// cloning with key or ref requires a cast
+React.cloneElement(element, <React.ClassAttributes<Button>>{ ref: button => button.reset() });
+React.cloneElement(element, <{ isDisabled?: boolean } & React.Attributes>{
+    key: "disabledButton",
+    isDisabled: true
+});
+*/
+
+/// <reference path="global.d.ts" />
 
 type NativeAnimationEvent = AnimationEvent;
 type NativeClipboardEvent = ClipboardEvent;
@@ -40,7 +75,7 @@ declare namespace React {
     type ComponentType<P = {}> = ComponentClass<P> | StatelessComponent<P>;
 
     type Key = string | number;
-    type Ref<T> = string | ((instance: T | null) => any);
+    type Ref<T> = string | { bivarianceHack(instance: T | null): any }["bivarianceHack"];
 
     // tslint:disable-next-line:interface-over-type-literal
     type ComponentState = {};
@@ -89,6 +124,11 @@ declare namespace React {
         type: keyof ReactSVG;
     }
 
+    interface ReactPortal {
+        key: Key | null;
+        children: ReactNode;
+    }
+
     //
     // Factories
     // ----------------------------------------------------------------------
@@ -127,13 +167,11 @@ declare namespace React {
 
     // Should be Array<ReactNode> but type aliases cannot be recursive
     type ReactFragment = {} | Array<ReactChild | any[] | boolean>;
-    type ReactNode = ReactChild | ReactFragment | boolean | null | undefined;
+    type ReactNode = ReactChild | ReactFragment | ReactPortal | string | number | boolean | null | undefined;
 
     //
     // Top Level API
     // ----------------------------------------------------------------------
-
-    function createClass<P, S>(spec: ComponentSpec<P, S>): ClassicComponentClass<P>;
 
     // DOM Elements
     function createFactory<T extends HTMLElement>(
@@ -152,6 +190,11 @@ declare namespace React {
     function createFactory<P>(type: ComponentClass<P>): Factory<P>;
 
     // DOM Elements
+    // TODO: generalize this to everything in `keyof ReactHTML`, not just "input"
+    function createElement(
+        type: "input",
+        props?: InputHTMLAttributes<HTMLInputElement> & ClassAttributes<HTMLInputElement>,
+        ...children: ReactNode[]): DetailedReactHTMLElement<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
     function createElement<P extends HTMLAttributes<T>, T extends HTMLElement>(
         type: keyof ReactHTML,
         props?: ClassAttributes<T> & P,
@@ -179,7 +222,7 @@ declare namespace React {
         props?: ClassAttributes<T> & P,
         ...children: ReactNode[]): CElement<P, T>;
     function createElement<P>(
-        type: ComponentClass<P>,
+        type: SFC<P> | ComponentClass<P> | string,
         props?: Attributes & P,
         ...children: ReactNode[]): ReactElement<P>;
 
@@ -219,10 +262,8 @@ declare namespace React {
         props?: Q, // should be Q & Attributes
         ...children: ReactNode[]): ReactElement<P>;
 
-    function isValidElement<P>(object: {}): object is ReactElement<P>;
+    function isValidElement<P>(object: {} | null | undefined): object is ReactElement<P>;
 
-    const DOM: ReactDOM;
-    const PropTypes: ReactPropTypes;
     const Children: ReactChildren;
     const version: string;
 
@@ -245,7 +286,7 @@ declare namespace React {
         // tslint:enable:unified-signatures
 
         forceUpdate(callBack?: () => any): void;
-        render(): JSX.Element | null | false;
+        render(): JSX.Element | JSX.Element[] | ReactPortal | string | number | null | false;
 
         // React.Props<T> is now deprecated, which means that the `children`
         // property is not available on `P` by default, even though you can
@@ -314,13 +355,54 @@ declare namespace React {
     // ----------------------------------------------------------------------
 
     interface ComponentLifecycle<P, S> {
+        /**
+         * Called immediately before mounting occurs, and before `Component#render`.
+         * Avoid introducing any side-effects or subscriptions in this method.
+         */
         componentWillMount?(): void;
+        /**
+         * Called immediately after a compoment is mounted. Setting state here will trigger re-rendering.
+         */
         componentDidMount?(): void;
+        /**
+         * Called when the component may be receiving new props.
+         * React may call this even if props have not changed, so be sure to compare new and existing
+         * props if you only want to handle changes.
+         *
+         * Calling `Component#setState` generally does not trigger this method.
+         */
         componentWillReceiveProps?(nextProps: Readonly<P>, nextContext: any): void;
+        /**
+         * Called to determine whether the change in props and state should trigger a re-render.
+         *
+         * `Component` always returns true.
+         * `PureComponent` implements a shallow comparison on props and state and returns true if any
+         * props or states have changed.
+         *
+         * If false is returned, `Component#render`, `componentWillUpdate`
+         * and `componentDidUpdate` will not be called.
+         */
         shouldComponentUpdate?(nextProps: Readonly<P>, nextState: Readonly<S>, nextContext: any): boolean;
+        /**
+         * Called immediately before rendering when new props or state is received. Not called for the initial render.
+         *
+         * Note: You cannot call `Component#setState` here.
+         */
         componentWillUpdate?(nextProps: Readonly<P>, nextState: Readonly<S>, nextContext: any): void;
+        /**
+         * Called immediately after updating occurs. Not called for the initial render.
+         */
         componentDidUpdate?(prevProps: Readonly<P>, prevState: Readonly<S>, prevContext: any): void;
+        /**
+         * Called immediately before a component is destroyed. Perform any necessary cleanup in this method, such as
+         * cancelled network requests, or cleaning up any DOM elements created in `componentDidMount`.
+         */
         componentWillUnmount?(): void;
+        /**
+         * Catches exceptions generated in descendant components. Unhandled exceptions will cause
+         * the entire component tree to unmount.
+         */
+        componentDidCatch?(error: Error, errorInfo: ErrorInfo): void;
     }
 
     interface Mixin<P, S> extends ComponentLifecycle<P, S> {
@@ -339,7 +421,7 @@ declare namespace React {
     }
 
     interface ComponentSpec<P, S> extends Mixin<P, S> {
-        render(): ReactElement<any> | null;
+        render(): ReactElement<any> | Array<ReactElement<any>> | string | number | null;
 
         [propertyName: string]: any;
     }
@@ -350,6 +432,9 @@ declare namespace React {
 
     interface SyntheticEvent<T> {
         bubbles: boolean;
+        /**
+         * A reference to the element on which the event listener is registered.
+         */
         currentTarget: EventTarget & T;
         cancelable: boolean;
         defaultPrevented: boolean;
@@ -362,6 +447,12 @@ declare namespace React {
         isPropagationStopped(): boolean;
         persist(): void;
         // If you thought this should be `EventTarget & T`, see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/12239
+        /**
+         * A reference to the element from which the event was originally dispatched.
+         * This might be a child element to the element on which the event listener is registered.
+         *
+         * @see currentTarget
+         */
         target: EventTarget;
         timeStamp: number;
         type: string;
@@ -403,7 +494,13 @@ declare namespace React {
         altKey: boolean;
         charCode: number;
         ctrlKey: boolean;
+        /**
+         * See [DOM Level 3 Events spec](https://www.w3.org/TR/uievents-key/#keys-modifier). for a list of valid (case-sensitive) arguments to this method.
+         */
         getModifierState(key: string): boolean;
+        /**
+         * See the [DOM Level 3 Events spec](https://www.w3.org/TR/uievents-key/#named-key-attribute-values). for possible values
+         */
         key: string;
         keyCode: number;
         locale: string;
@@ -422,6 +519,9 @@ declare namespace React {
         clientX: number;
         clientY: number;
         ctrlKey: boolean;
+        /**
+         * See [DOM Level 3 Events spec](https://www.w3.org/TR/uievents-key/#keys-modifier). for a list of valid (case-sensitive) arguments to this method.
+         */
         getModifierState(key: string): boolean;
         metaKey: boolean;
         nativeEvent: NativeMouseEvent;
@@ -437,6 +537,9 @@ declare namespace React {
         altKey: boolean;
         changedTouches: TouchList;
         ctrlKey: boolean;
+        /**
+         * See [DOM Level 3 Events spec](https://www.w3.org/TR/uievents-key/#keys-modifier). for a list of valid (case-sensitive) arguments to this method.
+         */
         getModifierState(key: string): boolean;
         metaKey: boolean;
         nativeEvent: NativeTouchEvent;
@@ -477,7 +580,7 @@ declare namespace React {
     // Event Handler Types
     // ----------------------------------------------------------------------
 
-    type EventHandler<E extends SyntheticEvent<any>> = (event: E) => void;
+    type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }["bivarianceHack"];
 
     type ReactEventHandler<T> = EventHandler<SyntheticEvent<T>>;
 
@@ -2390,6 +2493,7 @@ declare namespace React {
         allowFullScreen?: boolean;
         allowTransparency?: boolean;
         alt?: string;
+        as?: string;
         async?: boolean;
         autoComplete?: string;
         autoFocus?: boolean;
@@ -2498,6 +2602,8 @@ declare namespace React {
         media?: string;
         rel?: string;
         target?: string;
+        type?: string;
+        as?: string;
     }
 
     // tslint:disable-next-line:no-empty-interface
@@ -2683,6 +2789,7 @@ declare namespace React {
         rel?: string;
         sizes?: string;
         type?: string;
+        as?: string;
     }
 
     interface MapHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -2700,6 +2807,7 @@ declare namespace React {
         loop?: boolean;
         mediaGroup?: string;
         muted?: boolean;
+        playsinline?: boolean;
         preload?: string;
         src?: string;
     }
@@ -2838,6 +2946,7 @@ declare namespace React {
         colSpan?: number;
         headers?: string;
         rowSpan?: number;
+        scope?: string;
     }
 
     interface ThHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -3260,16 +3369,46 @@ declare namespace React {
     }
 
     interface ReactSVG {
-        svg: SVGFactory;
         animate: SVGFactory;
         circle: SVGFactory;
+        clipPath: SVGFactory;
         defs: SVGFactory;
+        desc: SVGFactory;
         ellipse: SVGFactory;
+        feBlend: SVGFactory;
+        feColorMatrix: SVGFactory;
+        feComponentTransfer: SVGFactory;
+        feComposite: SVGFactory;
+        feConvolveMatrix: SVGFactory;
+        feDiffuseLighting: SVGFactory;
+        feDisplacementMap: SVGFactory;
+        feDistantLight: SVGFactory;
+        feDropShadow: SVGFactory;
+        feFlood: SVGFactory;
+        feFuncA: SVGFactory;
+        feFuncB: SVGFactory;
+        feFuncG: SVGFactory;
+        feFuncR: SVGFactory;
+        feGaussianBlur: SVGFactory;
+        feImage: SVGFactory;
+        feMerge: SVGFactory;
+        feMergeNode: SVGFactory;
+        feMorphology: SVGFactory;
+        feOffset: SVGFactory;
+        fePointLight: SVGFactory;
+        feSpecularLighting: SVGFactory;
+        feSpotLight: SVGFactory;
+        feTile: SVGFactory;
+        feTurbulence: SVGFactory;
+        filter: SVGFactory;
+        foreignObject: SVGFactory;
         g: SVGFactory;
         image: SVGFactory;
         line: SVGFactory;
         linearGradient: SVGFactory;
+        marker: SVGFactory;
         mask: SVGFactory;
+        metadata: SVGFactory;
         path: SVGFactory;
         pattern: SVGFactory;
         polygon: SVGFactory;
@@ -3277,10 +3416,14 @@ declare namespace React {
         radialGradient: SVGFactory;
         rect: SVGFactory;
         stop: SVGFactory;
+        svg: SVGFactory;
+        switch: SVGFactory;
         symbol: SVGFactory;
         text: SVGFactory;
+        textPath: SVGFactory;
         tspan: SVGFactory;
         use: SVGFactory;
+        view: SVGFactory;
     }
 
     interface ReactDOM extends ReactHTML, ReactSVG { }
@@ -3289,7 +3432,7 @@ declare namespace React {
     // React.PropTypes
     // ----------------------------------------------------------------------
 
-    type Validator<T> = (object: T, key: string, componentName: string, ...rest: any[]) => Error | null;
+    type Validator<T> = { bivarianceHack(object: T, key: string, componentName: string, ...rest: any[]): Error | null }["bivarianceHack"];
 
     interface Requireable<T> extends Validator<T> {
         isRequired: Validator<T>;
@@ -3354,6 +3497,16 @@ declare namespace React {
         item(index: number): Touch;
         identifiedTouch(identifier: number): Touch;
     }
+
+    //
+    // Error Interfaces
+    // ----------------------------------------------------------------------
+    interface ErrorInfo {
+        /**
+         * Captures which component contained the exception, and it's ancestors.
+         */
+        componentStack: string;
+    }
 }
 
 declare global {
@@ -3361,7 +3514,7 @@ declare global {
         // tslint:disable:no-empty-interface
         interface Element extends React.ReactElement<any> { }
         interface ElementClass extends React.Component<any> {
-            render(): JSX.Element | null | false;
+            render(): Element | Element[] | React.ReactPortal | string | number | null | false;
         }
         interface ElementAttributesProperty { props: {}; }
         interface ElementChildrenAttribute { children: {}; }

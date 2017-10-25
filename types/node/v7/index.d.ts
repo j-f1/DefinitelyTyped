@@ -3,10 +3,8 @@
 // Definitions by: Microsoft TypeScript <http://typescriptlang.org>
 //                 DefinitelyTyped <https://github.com/DefinitelyTyped/DefinitelyTyped>
 //                 Parambir Singh <https://github.com/parambirs>
-//                 Roberto Desideri <https://github.com/RobDesideri>
 //                 Christian Vaagland Tellnes <https://github.com/tellnes>
 //                 Wilco Bakker <https://github.com/WilcoBakker>
-//                 Daniel Imms <https://github.com/Tyriar>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
 /************************************************
@@ -382,10 +380,19 @@ declare namespace NodeJS {
         isTTY?: true;
     }
 
+    export interface WriteStream extends Socket {
+        columns?: number;
+        rows?: number;
+    }
+    export interface ReadStream extends Socket {
+        isRaw?: boolean;
+        setRawMode?(mode: boolean): void;
+    }
+
     export interface Process extends EventEmitter {
-        stdout: Socket;
-        stderr: Socket;
-        stdin: Socket;
+        stdout: WriteStream;
+        stderr: WriteStream;
+        stdin: ReadStream;
         openStdin(): Socket;
         argv: string[];
         argv0: string;
@@ -808,7 +815,7 @@ declare module "http" {
     };
     export function createServer(requestListener?: (request: IncomingMessage, response: ServerResponse) => void): Server;
     export function createClient(port?: number, host?: string): any;
-    export function request(options: RequestOptions, callback?: (res: IncomingMessage) => void): ClientRequest;
+    export function request(options: RequestOptions | string, callback?: (res: IncomingMessage) => void): ClientRequest;
     export function get(options: any, callback?: (res: IncomingMessage) => void): ClientRequest;
     export var globalAgent: Agent;
 }
@@ -846,7 +853,7 @@ declare module "cluster" {
         id: string;
         process: child.ChildProcess;
         suicide: boolean;
-        send(message: any, sendHandle?: any): boolean;
+        send(message: any, sendHandle?: any, callback?: (error: Error) => void): boolean;
         kill(signal?: string): void;
         destroy(signal?: string): void;
         disconnect(): void;
@@ -865,7 +872,7 @@ declare module "cluster" {
          */
         addListener(event: string, listener: Function): this;
         addListener(event: "disconnect", listener: () => void): this;
-        addListener(event: "error", listener: (code: number, signal: string) => void): this;
+        addListener(event: "error", listener: (error: Error) => void): this;
         addListener(event: "exit", listener: (code: number, signal: string) => void): this;
         addListener(event: "listening", listener: (address: Address) => void): this;
         addListener(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): this;  // the handle is a net.Socket or net.Server object, or undefined.
@@ -873,7 +880,7 @@ declare module "cluster" {
 
         emit(event: string | symbol, ...args: any[]): boolean;
         emit(event: "disconnect", listener: () => void): boolean
-        emit(event: "error", listener: (code: number, signal: string) => void): boolean
+        emit(event: "error", listener: (error: Error) => void): boolean
         emit(event: "exit", listener: (code: number, signal: string) => void): boolean
         emit(event: "listening", listener: (address: Address) => void): boolean
         emit(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): boolean
@@ -881,7 +888,7 @@ declare module "cluster" {
 
         on(event: string, listener: Function): this;
         on(event: "disconnect", listener: () => void): this;
-        on(event: "error", listener: (code: number, signal: string) => void): this;
+        on(event: "error", listener: (error: Error) => void): this;
         on(event: "exit", listener: (code: number, signal: string) => void): this;
         on(event: "listening", listener: (address: Address) => void): this;
         on(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): this;  // the handle is a net.Socket or net.Server object, or undefined.
@@ -889,7 +896,7 @@ declare module "cluster" {
 
         once(event: string, listener: Function): this;
         once(event: "disconnect", listener: () => void): this;
-        once(event: "error", listener: (code: number, signal: string) => void): this;
+        once(event: "error", listener: (error: Error) => void): this;
         once(event: "exit", listener: (code: number, signal: string) => void): this;
         once(event: "listening", listener: (address: Address) => void): this;
         once(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): this;  // the handle is a net.Socket or net.Server object, or undefined.
@@ -897,7 +904,7 @@ declare module "cluster" {
 
         prependListener(event: string, listener: Function): this;
         prependListener(event: "disconnect", listener: () => void): this;
-        prependListener(event: "error", listener: (code: number, signal: string) => void): this;
+        prependListener(event: "error", listener: (error: Error) => void): this;
         prependListener(event: "exit", listener: (code: number, signal: string) => void): this;
         prependListener(event: "listening", listener: (address: Address) => void): this;
         prependListener(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): this;  // the handle is a net.Socket or net.Server object, or undefined.
@@ -905,7 +912,7 @@ declare module "cluster" {
 
         prependOnceListener(event: string, listener: Function): this;
         prependOnceListener(event: "disconnect", listener: () => void): this;
-        prependOnceListener(event: "error", listener: (code: number, signal: string) => void): this;
+        prependOnceListener(event: "error", listener: (error: Error) => void): this;
         prependOnceListener(event: "exit", listener: (code: number, signal: string) => void): this;
         prependOnceListener(event: "listening", listener: (address: Address) => void): this;
         prependOnceListener(event: "message", listener: (message: any, handle: net.Socket | net.Server) => void): this;  // the handle is a net.Socket or net.Server object, or undefined.
@@ -1114,21 +1121,21 @@ declare module "zlib" {
     export function deflateRaw(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
     export function deflateRaw(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
     export function deflateRawSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
-    export function gzip(buf: Buffer, callback: (error: Error, result: Buffer) => void): void;
-    export function gzip(buf: Buffer, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
-    export function gzipSync(buf: Buffer, options?: ZlibOptions): Buffer;
-    export function gunzip(buf: Buffer, callback: (error: Error, result: Buffer) => void): void;
-    export function gunzip(buf: Buffer, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
-    export function gunzipSync(buf: Buffer, options?: ZlibOptions): Buffer;
-    export function inflate(buf: Buffer, callback: (error: Error, result: Buffer) => void): void;
-    export function inflate(buf: Buffer, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
-    export function inflateSync(buf: Buffer, options?: ZlibOptions): Buffer;
-    export function inflateRaw(buf: Buffer, callback: (error: Error, result: Buffer) => void): void;
-    export function inflateRaw(buf: Buffer, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
-    export function inflateRawSync(buf: Buffer, options?: ZlibOptions): Buffer;
-    export function unzip(buf: Buffer, callback: (error: Error, result: Buffer) => void): void;
-    export function unzip(buf: Buffer, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
-    export function unzipSync(buf: Buffer, options?: ZlibOptions): Buffer;
+    export function gzip(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
+    export function gzip(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
+    export function gzipSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
+    export function gunzip(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
+    export function gunzip(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
+    export function gunzipSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
+    export function inflate(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
+    export function inflate(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
+    export function inflateSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
+    export function inflateRaw(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
+    export function inflateRaw(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
+    export function inflateRawSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
+    export function unzip(buf: Buffer | string, callback: (error: Error, result: Buffer) => void): void;
+    export function unzip(buf: Buffer | string, options: ZlibOptions, callback: (error: Error, result: Buffer) => void): void;
+    export function unzipSync(buf: Buffer | string, options?: ZlibOptions): Buffer;
 
     export namespace constants {
         // Allowed flush values.
@@ -1411,7 +1418,7 @@ declare module "https" {
     };
     export interface Server extends tls.Server { }
     export function createServer(options: ServerOptions, requestListener?: Function): Server;
-    export function request(options: RequestOptions, callback?: (res: http.IncomingMessage) => void): http.ClientRequest;
+    export function request(options: RequestOptions | string, callback?: (res: http.IncomingMessage) => void): http.ClientRequest;
     export function get(options: RequestOptions, callback?: (res: http.IncomingMessage) => void): http.ClientRequest;
     export var globalAgent: Agent;
 }
@@ -1641,6 +1648,7 @@ declare module "child_process" {
         stdout: stream.Readable;
         stderr: stream.Readable;
         stdio: [stream.Writable, stream.Readable, stream.Readable];
+        killed: boolean;
         pid: number;
         kill(signal?: string): void;
         send(message: any, sendHandle?: any): boolean;
@@ -1860,37 +1868,29 @@ declare module "child_process" {
 }
 
 declare module "url" {
-    export interface Url {
-        href?: string;
-        protocol?: string;
+    export interface UrlObject {
         auth?: string;
-        hostname?: string;
-        port?: string;
-        host?: string;
-        pathname?: string;
-        search?: string;
-        query?: string | any;
-        slashes?: boolean;
         hash?: string;
+        host?: string;
+        hostname?: string;
+        href?: string;
         path?: string;
+        pathname?: string;
+        port?: string | number;
+        protocol?: string;
+        query?: string | { [key: string]: any; };
+        search?: string;
+        slashes?: boolean;
     }
 
-    export interface UrlObject {
-        protocol?: string;
-        slashes?: boolean;
-        auth?: string;
-        host?: string;
-        hostname?: string;
-        port?: string | number;
-        pathname?: string;
-        search?: string;
-        query?: { [key: string]: any; };
-        hash?: string;
+    export interface Url extends UrlObject {
+        port?: string;
+        query?: any;
     }
 
     export function parse(urlStr: string, parseQueryString?: boolean, slashesDenoteHost?: boolean): Url;
     export function format(URL: URL, options?: URLFormatOptions): string;
-    export function format(urlObject: UrlObject): string;
+    export function format(urlObject: UrlObject | string): string;
     export function resolve(from: string, to: string): string;
 
     export interface URLFormatOptions {
@@ -2403,23 +2403,23 @@ declare module "fs" {
          */
         addListener(event: string, listener: Function): this;
         addListener(event: "change", listener: (eventType: string, filename: string | Buffer) => void): this;
-        addListener(event: "error", listener: (code: number, signal: string) => void): this;
+        addListener(event: "error", listener: (error: Error) => void): this;
 
         on(event: string, listener: Function): this;
         on(event: "change", listener: (eventType: string, filename: string | Buffer) => void): this;
-        on(event: "error", listener: (code: number, signal: string) => void): this;
+        on(event: "error", listener: (error: Error) => void): this;
 
         once(event: string, listener: Function): this;
         once(event: "change", listener: (eventType: string, filename: string | Buffer) => void): this;
-        once(event: "error", listener: (code: number, signal: string) => void): this;
+        once(event: "error", listener: (error: Error) => void): this;
 
         prependListener(event: string, listener: Function): this;
         prependListener(event: "change", listener: (eventType: string, filename: string | Buffer) => void): this;
-        prependListener(event: "error", listener: (code: number, signal: string) => void): this;
+        prependListener(event: "error", listener: (error: Error) => void): this;
 
         prependOnceListener(event: string, listener: Function): this;
         prependOnceListener(event: "change", listener: (eventType: string, filename: string | Buffer) => void): this;
-        prependOnceListener(event: "error", listener: (code: number, signal: string) => void): this;
+        prependOnceListener(event: "error", listener: (error: Error) => void): this;
     }
 
     export interface ReadStream extends stream.Readable {
@@ -3834,7 +3834,7 @@ declare module "util" {
     export function isString(object: any): object is string;
     export function isSymbol(object: any): object is symbol;
     export function isUndefined(object: any): object is undefined;
-    export function deprecate(fn: Function, message: string): Function;
+    export function deprecate<T extends Function>(fn: T, message: string): T;
 }
 
 declare module "assert" {

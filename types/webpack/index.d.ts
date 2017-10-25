@@ -5,6 +5,8 @@
 //                 Boris Cherny <https://github.com/bcherny>
 //                 Tommy Troy Lin <https://github.com/tommytroylin>
 //                 Mohsen Azimi <https://github.com/mohsen1>
+//                 Jonathan Creamer <https://github.com/jcreamer898>
+//                 Ahmed T. Ali <https://github.com/ahmed-taj>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
 /// <reference types="node" />
@@ -35,7 +37,7 @@ declare namespace webpack {
          * If `output.pathinfo` is set, the included pathinfo is shortened to this directory.
          */
         context?: string;
-        entry?: string | string[] | Entry;
+        entry?: string | string[] | Entry | EntryFunc;
         /** Choose a style of source mapping to enhance the debugging process. These values can affect build and rebuild speed dramatically. */
         devtool?: Options.Devtool;
         /** Options affecting the output. */
@@ -102,6 +104,8 @@ declare namespace webpack {
         [name: string]: string | string[];
     }
 
+    type EntryFunc = () => (string | string[] | Promise<string | string[]>);
+
     interface DevtoolModuleFilenameTemplateInfo {
         identifier: string;
         shortIdentifier: string;
@@ -147,7 +151,7 @@ declare namespace webpack {
         /** Include comments with information about the modules. */
         pathinfo?: boolean;
         /** If set, export the bundle as library. output.library is the name. */
-        library?: string;
+        library?: string | string[];
         /**
          * Which format to export the library:
          * <ul>
@@ -356,7 +360,8 @@ declare namespace webpack {
     type Resolve = OldResolve | NewResolve;
 
     interface OldResolveLoader extends OldResolve {
-        /** It describes alternatives for the module name that are tried.
+        /**
+         * It describes alternatives for the module name that are tried.
          * @deprecated Replaced by `moduleExtensions` in webpack 2.
          */
         moduleTemplates?: string[];
@@ -782,7 +787,7 @@ declare namespace webpack {
             /**
              * An object containing `content` and `name`.
              */
-            manifest: { content: string, name: string };
+            manifest: { content: string, name: string } | string;
 
             /**
              * The name where the DLL is exposed.
@@ -832,6 +837,14 @@ declare namespace webpack {
         constructor();
     }
 
+    class HashedModuleIdsPlugin extends Plugin {
+        constructor(options?: {
+            hashFunction?: string,
+            hashDigest?: string,
+            hashDigestLength?: number
+        });
+    }
+
     class HotModuleReplacementPlugin extends Plugin {
         constructor(options?: any);
     }
@@ -846,6 +859,10 @@ declare namespace webpack {
 
     class NamedModulesPlugin extends Plugin {
         constructor();
+    }
+
+    class NamedChunksPlugin extends Plugin {
+        constructor(nameResolver?: (chunk: any) => string | null );
     }
 
     class NoEmitOnErrorsPlugin extends Plugin {
@@ -906,7 +923,7 @@ declare namespace webpack {
     }
 
     class WatchIgnorePlugin extends Plugin {
-        constructor(paths: RegExp[]);
+        constructor(paths: Array<string | RegExp>);
     }
 
     namespace optimize {
@@ -1021,6 +1038,8 @@ declare namespace webpack {
                 comments?: boolean | RegExp | CommentFilter;
                 exclude?: Condition | Condition[];
                 include?: Condition | Condition[];
+                /** Parallelization can speedup your build significantly and is therefore highly recommended. */
+                parallel?: boolean | { cache: boolean, workers: boolean | number };
                 sourceMap?: boolean;
                 test?: Condition | Condition[];
             }
@@ -1040,9 +1059,6 @@ declare namespace webpack {
              * They only care for metadata. The pitch method on the loaders is called from left to right before the loaders are called (from right to left).
              * If a loader delivers a result in the pitch method the process turns around and skips the remaining loaders,
              * continuing with the calls to the more left loaders. data can be passed between pitch and normal call.
-             * @param remainingRequest
-             * @param precedingRequest
-             * @param data
              */
             pitch?(remainingRequest: string, precedingRequest: string, data: any): any | undefined;
 
@@ -1147,38 +1163,29 @@ declare namespace webpack {
 
             /**
              * Emit a warning.
-             * @param message
              */
-            emitWarning(message: string): void;
+            emitWarning(message: string | Error): void;
 
             /**
              * Emit a error.
-             * @param message
              */
-            emitError(message: string): void;
+            emitError(message: string | Error): void;
 
             /**
              * Execute some code fragment like a module.
              *
              * Don't use require(this.resourcePath), use this function to make loaders chainable!
              *
-             * @param code
-             * @param filename
              */
             exec(code: string, filename: string): any;
 
             /**
              * Resolve a request like a require expression.
-             * @param context
-             * @param request
-             * @param callback
              */
             resolve(context: string, request: string, callback: (err: Error, result: string) => void): any;
 
             /**
              * Resolve a request like a require expression.
-             * @param context
-             * @param request
              */
             resolveSync(context: string, request: string): string;
 
@@ -1186,7 +1193,6 @@ declare namespace webpack {
              * Adds a file as dependency of the loader result in order to make them watchable.
              * For example, html-loader uses this technique as it finds src and src-set attributes.
              * Then, it sets the url's for those attributes as dependencies of the html file that is parsed.
-             * @param file
              */
             addDependency(file: string): void;
 
@@ -1194,13 +1200,11 @@ declare namespace webpack {
              * Adds a file as dependency of the loader result in order to make them watchable.
              * For example, html-loader uses this technique as it finds src and src-set attributes.
              * Then, it sets the url's for those attributes as dependencies of the html file that is parsed.
-             * @param file
              */
             dependency(file: string): void;
 
             /**
              * Add a directory as dependency of the loader result.
-             * @param directory
              */
             addContextDependency(directory: string): void;
 
@@ -1258,9 +1262,6 @@ declare namespace webpack {
 
             /**
              * Emit a file. This is webpack-specific.
-             * @param name
-             * @param content
-             * @param sourceMap
              */
             emitFile(name: string, content: Buffer|string, sourceMap: any): void;
 

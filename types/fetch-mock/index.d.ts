@@ -1,6 +1,9 @@
-// Type definitions for fetch-mock 5.8
+// Type definitions for fetch-mock 5.12
 // Project: https://github.com/wheresrhys/fetch-mock
-// Definitions by: Alexey Svetliakov <https://github.com/asvetliakov>, Tamir Duberstein <https://github.com/tamird>, Risto Keravuori <https://github.com/merrywhether>
+// Definitions by: Alexey Svetliakov <https://github.com/asvetliakov>
+//                 Tamir Duberstein <https://github.com/tamird>
+//                 Risto Keravuori <https://github.com/merrywhether>
+//                 Chris Sinclair <https://github.com/chrissinclair>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.2
 
@@ -9,8 +12,6 @@ declare namespace fetchMock {
 
     /**
      * Mock matcher function
-     * @param url
-     * @param opts
      */
     type MockMatcherFunction = (url: string, opts: MockRequest) => boolean;
     /**
@@ -74,8 +75,6 @@ declare namespace fetchMock {
                         | MockResponseObject | Promise<MockResponseObject>;
     /**
      * Mock response function
-     * @param url
-     * @param opts
      */
     type MockResponseFunction = (url: string, opts: MockRequest) => MockResponse;
 
@@ -332,6 +331,12 @@ declare namespace fetchMock {
          * Chainable method that clears all data recorded for fetch()'s calls
          */
         reset(): this;
+
+        /**
+         * Returns a promise that resolves once all fetches handled by fetch-mock
+         * have resolved.
+         */
+        flush(): Promise<MockResponse[]>;
 
         /**
          * Returns all calls to fetch, grouped by whether fetch-mock matched

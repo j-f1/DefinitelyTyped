@@ -1,6 +1,6 @@
 // Type definitions for Express 4.x
 // Project: http://expressjs.com
-// Definitions by: Boris Yankov <https://github.com/borisyankov/>, Michał Lytek <https://github.com/19majkel94>, Kacper Polak <https://github.com/kacepe>
+// Definitions by: Boris Yankov <https://github.com/borisyankov>, Michał Lytek <https://github.com/19majkel94>, Kacper Polak <https://github.com/kacepe>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // This extracts the core definitions from express to prevent a circular dependency between express and serve-static
 /// <reference types="node" />
@@ -9,7 +9,7 @@ declare global {
     namespace Express {
 
         // These open interfaces may be extended in an application-specific manner via declaration merging.
-        // See for example method-override.d.ts (https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/method-override/method-override.d.ts)
+        // See for example method-override.d.ts (https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/method-override/index.d.ts)
         export interface Request { }
         export interface Response { }
         export interface Application { }
@@ -174,7 +174,12 @@ interface RequestRanges extends Array<ByteRange> { type: string; }
 
 interface Errback { (err: Error): void; }
 
-interface Request extends http.IncomingMessage, Express.Request {
+interface Request<
+    Body = any,
+    Query = any,
+    Params = any,
+    Cookies = any
+> extends http.IncomingMessage, Express.Request {
 
     /**
         * Return request header.
@@ -197,8 +202,10 @@ interface Request extends http.IncomingMessage, Express.Request {
         *
         * @param name
         */
+    get(name: "set-cookie"): string[] | undefined;
     get(name: string): string | undefined;
 
+    header(name: "set-cookie"): string[] | undefined;
     header(name: string): string | undefined;
 
     /**
@@ -349,7 +356,7 @@ interface Request extends http.IncomingMessage, Express.Request {
         *
         * @param type
         */
-    is(type: string): boolean;
+    is(type: string): string | false;
 
     /**
         * Return the protocol string "http" or "https"
@@ -433,14 +440,14 @@ interface Request extends http.IncomingMessage, Express.Request {
     xhr: boolean;
 
     //body: { username: string; password: string; remember: boolean; title: string; };
-    body: any;
+    body: Body;
 
     //cookies: { string; remember: boolean; };
-    cookies: any;
+    cookies: Cookies;
 
     method: string;
 
-    params: any;
+    params: Params;
 
     /**
         * Clear cookie `name`.
@@ -450,7 +457,7 @@ interface Request extends http.IncomingMessage, Express.Request {
         */
     clearCookie(name: string, options?: any): Response;
 
-    query: any;
+    query: Query;
 
     route: any;
 
