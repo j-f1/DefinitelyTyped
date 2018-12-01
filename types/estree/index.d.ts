@@ -1,7 +1,9 @@
 // Type definitions for ESTree AST specification
 // Project: https://github.com/estree/estree
 // Definitions by: RReverser <https://github.com/RReverser>
+// Definitions by: Jed Fox <https://github.com/j-f1>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
+// TypeScript Version: 2.2
 
 // This definition file follows a somewhat unusual format. ESTree allows
 // runtime type checks based on the `type` parameter. In order to explain this
@@ -545,4 +547,89 @@ export interface ExportAllDeclaration extends BaseModuleDeclaration {
 export interface AwaitExpression extends BaseExpression {
   type: "AwaitExpression";
   argument: Expression;
+}
+
+type _NodeMap = { [K in Node['type']]: Node }
+
+export interface NodeForType extends _NodeMap {
+  Identifier: Identifier
+
+  SimpleLiteral: SimpleLiteral
+  RegExpLiteral: RegExpLiteral
+
+  Program: Program
+
+  FunctionDeclaration: FunctionDeclaration
+  FunctionExpression: FunctionExpression
+  ArrowFunctionExpression: ArrowFunctionExpression
+
+  SwitchCase: SwitchCase
+  CatchClause: CatchClause
+  VariableDeclarator: VariableDeclarator
+
+  ExpressionStatement: ExpressionStatement
+  BlockStatement: BlockStatement
+  EmptyStatement: EmptyStatement
+  DebuggerStatement: DebuggerStatement
+  WithStatement: WithStatement
+  ReturnStatement: ReturnStatement
+  LabeledStatement: LabeledStatement
+  BreakStatement: BreakStatement
+  ContinueStatement: ContinueStatement
+  IfStatement: IfStatement
+  SwitchStatement: SwitchStatement
+  ThrowStatement: ThrowStatement
+  TryStatement: TryStatement
+  WhileStatement: WhileStatement
+  DoWhileStatement: DoWhileStatement
+  ForStatement: ForStatement
+  ForInStatement: ForInStatement
+  ForOfStatement: ForOfStatement
+
+  VariableDeclaration: VariableDeclaration
+  ClassDeclaration: ClassDeclaration
+
+  ThisExpression: ThisExpression
+  ArrayExpression: ArrayExpression
+  ObjectExpression: ObjectExpression
+  YieldExpression: YieldExpression
+  UnaryExpression: UnaryExpression
+  UpdateExpression: UpdateExpression
+  BinaryExpression: BinaryExpression
+  AssignmentExpression: AssignmentExpression
+  LogicalExpression: LogicalExpression
+  MemberExpression: MemberExpression
+  ConditionalExpression: ConditionalExpression
+  CallExpression: SimpleCallExpression // <-- Important!
+  NewExpression: NewExpression
+  SequenceExpression: SequenceExpression
+  TemplateLiteral: TemplateLiteral
+  TaggedTemplateExpression: TaggedTemplateExpression
+  ClassExpression: ClassExpression
+  MetaProperty: MetaProperty
+  AwaitExpression: AwaitExpression
+
+  Property: Property
+  AssignmentProperty: AssignmentProperty
+  Super: Super
+  TemplateElement: TemplateElement
+  SpreadElement: SpreadElement
+
+  ObjectPattern: ObjectPattern
+  ArrayPattern: ArrayPattern
+  RestElement: RestElement
+  AssignmentPattern: AssignmentPattern
+
+  ClassBody: ClassBody
+  MethodDefinition: MethodDefinition
+
+  ImportDeclaration: ImportDeclaration
+  ExportNamedDeclaration: ExportNamedDeclaration
+  ExportDefaultDeclaration: ExportDefaultDeclaration
+  ExportAllDeclaration: ExportAllDeclaration
+
+  ImportSpecifier: ImportSpecifier
+  ImportDefaultSpecifier: ImportDefaultSpecifier
+  ImportNamespaceSpecifier: ImportNamespaceSpecifier
+  ExportSpecifier: ExportSpecifier
 }

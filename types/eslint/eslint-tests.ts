@@ -1,4 +1,4 @@
-import { Comment } from 'estree';
+import { Comment, IfStatement } from 'estree';
 import { AST, SourceCode, Rule, Linter, CLIEngine, RuleTester, Scope } from 'eslint';
 
 const SOURCE = `var foo = bar;`;
@@ -338,7 +338,9 @@ rule = {
             onCodePathSegmentStart(segment, node) {},
             onCodePathSegmentEnd(segment, node) {},
             onCodePathSegmentLoop(fromSegment, toSegment, node) {},
-            IfStatement(node) {},
+            IfStatement(node) {
+                const foo: IfStatement = node
+            },
             'Program:exit'() {},
         };
     },
